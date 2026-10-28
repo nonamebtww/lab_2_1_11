@@ -89,7 +89,7 @@ public abstract class User {
 
   // Авторизация по коду авторизации.
   public virtual bool AuthorizeByCode(string code) {
-    if (authCode == null || authCode != (code ?? string.Empty).Trim()) {
+    if (!CheckCode(code)) {
       ErrorMessage = "Неверный код авторизации.";
       return false;
     }
@@ -99,17 +99,22 @@ public abstract class User {
   }
 
   // Авторизация с помощью файла-ключа, содержащего код авторизации.
+  // Код сравнивается методом CheckCode, а не виртуальным AuthorizeByCode,
+  // чтобы дополнительные проверки производных классов выполнялись
+  // один раз в их версии AuthorizeByKey и сообщение об отказе
+  // не заменялось на «Файл-ключ недействителен.».
   public virtual bool AuthorizeByKey(string keyPath) {
     if (!File.Exists(keyPath)) {
       ErrorMessage = "Файл-ключ не найден.";
       return false;
     }
 
-    if (!AuthorizeByCode(File.ReadAllText(keyPath))) {
+    if (!CheckCode(File.ReadAllText(keyPath))) {
       ErrorMessage = "Файл-ключ недействителен.";
       return false;
     }
 
+    ErrorMessage = null;
     return true;
   }
 
@@ -165,6 +170,11 @@ public abstract class User {
     return passwordHash != null
            && password != null
            && passwordHash == HashPassword(password);
+  }
+
+  // Проверяет, совпадает ли код с кодом авторизации пользователя.
+  public bool CheckCode(string code) {
+    return authCode != null && authCode == (code ?? string.Empty).Trim();
   }
 
   #region Статические проверки
